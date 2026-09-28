@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stock control</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF0F3;--panel:#FFFFFF;--ink:#14202B;--muted:#5B6B7A;--line:#D9DFE5;
+  --ok:#0B7A75;--ok-soft:#DDF1EF;--warn:#D9481F;--warn-soft:#FCE6DE;--field:#F6F8FA;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Lora",Georgia,serif;font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px 40px}
+
+.top{display:flex;justify-content:space-between;align-items:center;padding:18px 0;border-bottom:1px solid var(--line)}
+.top h1{margin:0;font-size:17px;font-weight:700;letter-spacing:.01em}
+.top .right{display:flex;align-items:center;gap:14px;color:var(--muted);font-size:13px}
+.btn{background:var(--ink);color:var(--bg);border:0;border-radius:6px;padding:8px 14px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.small{padding:5px 10px;font-size:13px}
+.btn:hover{opacity:.88}
+.btn:disabled{opacity:.5;cursor:default}
+
+.hero{padding:34px 0 26px}
+.hero h2{margin:0;font-size:clamp(26px,4vw,40px);line-height:1.15;font-weight:600;letter-spacing:-.01em;max-width:22em}
+.hero p{margin:8px 0 0;color:var(--muted);font-size:16px}
+.hero.alert h2{color:var(--warn)}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:stretch}
+.forms{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px;align-items:stretch}
+@media (max-width:920px){.layout,.forms{grid-template-columns:1fr}}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.panel h3{margin:0;font-size:16px;font-weight:700}
+.panel-head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.panel-head span{color:var(--muted);font-size:13px}
+.scroll{overflow-x:auto}
+
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-weight:500;color:var(--muted);font-size:13px;padding:10px 18px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:14px 18px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.name{font-weight:600}
+.sku{color:var(--muted);font-size:13px}
+.level{min-width:220px}
+.level .nums{display:flex;align-items:baseline;gap:8px;margin-bottom:6px}
+.level .nums strong{font-size:22px;font-weight:700;line-height:1}
+.level .nums span{color:var(--muted);font-size:13px}
+.gauge{position:relative;height:8px;background:var(--field);border-radius:4px;border:1px solid var(--line)}
+.fill{display:block;height:100%;width:var(--w);border-radius:3px}
+.fill.ok{background:var(--ok)}.fill.low{background:var(--warn)}
+.tick{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink);border-radius:1px}
+@media (prefers-reduced-motion:no-preference){.fill{animation:grow .9s cubic-bezier(.2,.7,.2,1) both}@keyframes grow{from{width:0}}}
+
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.low{background:var(--warn-soft);color:var(--warn)}
+.pill.done{background:var(--field);color:var(--muted)}
+.empty{padding:22px 18px;color:var(--muted)}
+
+.rail{display:flex;flex-direction:column;gap:24px;min-width:0}
+.rail .grow{flex:1}
+.main-panel{display:flex;flex-direction:column;min-width:0}
+.main-panel .scroll{flex:1}
+.list{list-style:none;margin:0;padding:0}
+.list li{padding:13px 18px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+.list li:last-child{border-bottom:0}
+.list.capped{max-height:280px;overflow-y:auto}
+.list .meta{grid-column:1/-1;color:var(--muted);font-size:13px}
+
+form{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.forms .panel{display:flex;flex-direction:column}
+.forms form{flex:1}
+.forms form .btn{margin-top:auto}
+label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+input,select{background:var(--field);border:1px solid var(--line);border-radius:6px;padding:9px 10px;color:var(--ink);width:100%}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{color:var(--muted);font-size:13px;margin:0}
+.error{color:var(--warn);font-size:14px;margin:0;min-height:1em}
+
+.range{display:flex;gap:8px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.range input{min-width:0}
+.bars{list-style:none;margin:0;padding:6px 0}
+.bars li{padding:9px 18px}
+.bars .row{display:flex;justify-content:space-between;gap:10px;font-size:14px;margin-bottom:5px}
+.bars .row b{font-weight:600}
+.bar{height:6px;background:var(--field);border-radius:3px}
+.bar i{display:block;height:100%;width:var(--w);background:var(--ink);border-radius:3px}
+
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:500;opacity:0;pointer-events:none;transition:.25s}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Stock control</h1>
+    <div class="right"><span id="updated"></span><button class="btn ghost small" id="refreshBtn">Refresh</button></div>
+  </header>
+
+  <section class="hero" id="hero">
+    <h2 id="headline">Loading stock</h2>
+    <p id="sub"></p>
+  </section>
+
+  <div class="layout">
+    <section class="panel main-panel">
+      <div class="panel-head"><h3>Stock levels</h3><span>The dark tick marks each product's reorder level</span></div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Product</th><th>Stock</th><th>Status</th><th></th></tr></thead>
+          <tbody id="stockRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <aside class="rail">
+      <section class="panel">
+        <div class="panel-head"><h3>Reorder alerts</h3><span id="alertCount"></span></div>
+        <ul class="list capped" id="alerts"></ul>
+      </section>
+
+      <section class="panel grow">
+        <div class="panel-head"><h3>Fast-moving products</h3><span>Units sold</span></div>
+        <div class="range">
+          <input id="from" type="date" aria-label="From date">
+          <input id="to" type="date" aria-label="To date">
+          <button class="btn small" id="goFast">Show</button>
+        </div>
+        <p class="error" id="fastError" style="padding:0 18px"></p>
+        <ul class="bars" id="fast"></ul>
+      </section>
+    </aside>
+  </div>
+
+  <div class="forms">
+      <section class="panel">
+        <div class="panel-head"><h3>Add product</h3><span>Saved to the database</span></div>
+        <form id="productForm">
+          <div class="two">
+            <label>Name<input id="pName" required maxlength="100" placeholder="e.g. Basmati rice 5kg"></label>
+            <label>SKU<input id="pSku" required maxlength="50" placeholder="e.g. RICE-5KG"></label>
+          </div>
+          <div class="two">
+            <label>Opening stock<input id="pStock" type="number" min="0" step="1" value="0" required></label>
+            <label>Reorder level<input id="pThreshold" type="number" min="0" step="1" placeholder="0" required></label>
+          </div>
+          <label>Reorder quantity<input id="pReorderQty" type="number" min="1" step="1" placeholder="0" required></label>
+          <p class="hint">An alert is raised when stock falls to the reorder level or below.</p>
+          <p class="error" id="productError" role="alert"></p>
+          <button class="btn" type="submit" id="productBtn">Add product</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><h3>Record stock movement</h3></div>
+        <form id="moveForm">
+          <label>Product<select id="product" required></select></label>
+          <div class="two">
+            <label>Reason
+              <select id="reason"><option value="SALE">Sale</option><option value="PURCHASE">Purchase</option><option value="RETURN">Customer return</option><option value="DAMAGE">Damage</option></select>
+            </label>
+            <label>Quantity<input id="qty" type="number" min="1" step="1" placeholder="0"></label>
+          </div>
+          <label>Note<input id="note" placeholder="Optional"></label>
+          <p class="hint">Sales and damage take stock out. Purchases and returns add it.</p>
+          <p class="error" id="formError" role="alert"></p>
+          <button class="btn" type="submit">Record movement</button>
+        </form>
+      </section>
+  </div>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const day = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+
+async function api(url, opts) {
+  const r = await fetch(url, opts);
+  const body = r.status === 204 ? null : await r.json().catch(() => null);
+  if (!r.ok) {
+    const f = body && body.fieldErrors ? ' ' + Object.entries(body.fieldErrors).map(([k, v]) => k + ': ' + v).join(', ') : '';
+    throw new Error(((body && body.message) || 'Request failed with status ' + r.status) + f);
+  }
+  return body;
+}
+
+function toast(text) {
+  const t = $('toast');
+  t.textContent = text;
+  t.classList.add('show');
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function gauge(p) {
+  const max = Math.max(p.reorderThreshold * 3, p.currentStock, 1);
+  const pct = Math.min(100, p.currentStock / max * 100);
+  const tick = Math.min(100, p.reorderThreshold / max * 100);
+  const low = p.currentStock <= p.reorderThreshold;
+  return '<div class="gauge"><i class="fill ' + (low ? 'low' : 'ok') + '" style="--w:' + pct + '%"></i><b class="tick" style="left:' + tick + '%"></b></div>';
+}
+
+async function loadProducts() {
+  const products = await api('/api/products');
+  const low = products.filter(p => p.currentStock <= p.reorderThreshold);
+  const hero = $('hero');
+
+  if (!products.length) {
+    $('headline').textContent = 'No products yet';
+    $('sub').textContent = 'Use the Add product form to start tracking stock.';
+    hero.classList.remove('alert');
+  } else if (!low.length) {
+    $('headline').textContent = 'Every product is above its reorder level';
+    $('sub').textContent = 'Tracking ' + plural(products.length, 'product', 'products') + '.';
+    hero.classList.remove('alert');
+  } else {
+    $('headline').textContent = plural(low.length, 'product is', 'products are') + ' at or below the reorder level';
+    $('sub').textContent = low.map(p => p.name).join(', ') + ' should be restocked.';
+    hero.classList.add('alert');
+  }
+
+  $('stockRows').innerHTML = products.map(p => {
+    const isLow = p.currentStock <= p.reorderThreshold;
+    const label = p.currentStock <= 0 ? 'Out of stock' : isLow ? 'Reorder now' : 'In stock';
+    return '<tr><td><div class="name">' + esc(p.name) + '</div><div class="sku">' + esc(p.sku) + '</div></td>' +
+      '<td class="level"><div class="nums"><strong>' + p.currentStock + '</strong><span>reorder at ' + p.reorderThreshold + ', orders ' + p.reorderQuantity + '</span></div>' + gauge(p) + '</td>' +
+      '<td><span class="pill ' + (isLow ? 'low' : 'ok') + '">' + label + '</span></td>' +
+      '<td><button class="btn ghost small" data-id="' + p.id + '">Record</button></td></tr>';
+  }).join('') || '<tr><td colspan="4" class="empty">No products yet.</td></tr>';
+
+  const keep = $('product').value;
+  $('product').innerHTML = products.map(p => '<option value="' + p.id + '">' + esc(p.name) + ' (' + esc(p.sku) + ')</option>').join('');
+  if (keep) $('product').value = keep;
+}
+
+async function loadAlerts() {
+  const all = await api('/api/alerts');
+  const open = all.filter(a => a.status === 'OPEN');
+  const rest = all.filter(a => a.status !== 'OPEN').sort((a, b) => b.id - a.id).slice(0, 5);
+  const rows = open.sort((a, b) => b.id - a.id).concat(rest);
+  $('alertCount').textContent = open.length + ' open';
+  $('alerts').innerHTML = rows.map(a => {
+    const when = new Date(a.createdAt);
+    const time = isNaN(when) ? '' : when.toLocaleString([], {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'});
+    const isOpen = a.status === 'OPEN';
+    return '<li><strong>' + esc(a.sku) + '</strong><span class="pill ' + (isOpen ? 'low' : 'done') + '">' + (isOpen ? 'Open' : 'Fulfilled') + '</span>' +
+      '<span class="meta">Stock was ' + a.stockAtTrigger + ', reorder ' + a.reorderQuantity + (time ? ', raised ' + esc(time) : '') + '</span></li>';
+  }).join('') || '<li class="empty" style="display:block">No alerts. Stock is above every reorder level.</li>';
+}
+
+async function loadFast() {
+  try {
+    const rows = await api('/api/reports/fast-moving?from=' + $('from').value + '&to=' + $('to').value + '&limit=8');
+    const max = Math.max(...rows.map(r => r.totalSold), 1);
+    $('fast').innerHTML = rows.map(r =>
+      '<li><div class="row"><b>' + esc(r.name) + '</b><span>' + r.totalSold + '</span></div><div class="bar"><i style="--w:' + (r.totalSold / max * 100) + '%"></i></div></li>'
+    ).join('') || '<li class="empty" style="display:block;padding:8px 0">No sales in this date range.</li>';
+    $('fastError').textContent = '';
+  } catch (e) { $('fastError').textContent = e.message; $('fast').innerHTML = ''; }
+}
+
+async function refresh() {
+  try {
+    await Promise.all([loadProducts(), loadAlerts(), loadFast()]);
+    $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+  } catch (e) {
+    $('headline').textContent = 'Cannot reach the inventory API';
+    $('sub').textContent = e.message;
+    $('hero').classList.add('alert');
+  }
+}
+
+/* Add product -> POST /api/products -> saved in MySQL */
+$('productForm').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  $('productError').textContent = '';
+  const btn = $('productBtn');
+  btn.disabled = true;
+  try {
+    const p = await api('/api/products', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        name: $('pName').value.trim(),
+        sku: $('pSku').value.trim(),
+        currentStock: Number($('pStock').value),
+        reorderThreshold: Number($('pThreshold').value),
+        reorderQuantity: Number($('pReorderQty').value)
+      })
+    });
+    $('productForm').reset();
+    $('pStock').value = 0;
+    toast('Added ' + ((p && p.name) || 'product') + '.');
+    await refresh();
+  } catch (e) {
+    $('productError').textContent = e.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('moveForm').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  $('formError').textContent = '';
+  try {
+    const res = await api('/api/stock-movements', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        productId: Number($('product').value),
+        reason: $('reason').value,
+        quantity: Number($('qty').value),
+        note: $('note').value || null
+      })
+    });
+    $('qty').value = '';
+    $('note').value = '';
+    toast('Recorded. Stock is now ' + res.stockAfter + '.');
+    await refresh();
+  } catch (e) { $('formError').textContent = e.message; }
+});
+
+$('stockRows').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-id]');
+  if (!b) return;
+  $('product').value = b.dataset.id;
+  $('qty').focus();
+});
+
+$('refreshBtn').addEventListener('click', refresh);
+$('goFast').addEventListener('click', loadFast);
+
+const now = new Date();
+$('to').value = day(now);
+$('from').value = day(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 30));
+refresh();
+setInterval(refresh, 30000);
+</script>
+</body>
+</html>
